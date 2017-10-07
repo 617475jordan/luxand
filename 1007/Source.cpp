@@ -1,21 +1,46 @@
-#include "resource.h"
-#include <time.h>
-#include "hbitmapAndMat.h"
-#include "getFiles.h"
-#include "luxandFace.h"
+#include "Header.h"
 
-vector<string>      m_vecStrImgPath;
-vector<string>      m_vecStrDatalFilePath;
-ImgData m_imgData;
-luxandFace *m_luxandFace = new luxandFace();
-string m_strModelPath = "..\\data";
-void initialize();
-void loadImgPath(string m_strImgPath);
-int getlen(char *result);
 int main()
 {
-	if (FSDKE_OK != FSDK_ActivateLibrary("hbdCpD+tb3dFNk0I9gQ4DrBocUmlpkGbVmg1ausq6mfqb0qF167rpoxxxjTpJkznbDP4WNwgnUJ1DT8oz7QvNAA/0CxFRID26IRrGIbiT8tFpbYGQge/2rvwAbvun6gEdkASuQgpgsZOjUTgr+V1IHlNDSUUbO953CCEzUhzDuw=")) {
-		MessageBox(0, L"Please run the License Key Wizard (Start - Luxand - FaceSDK - License Key Wizard)\n", L"Error activating FaceSDK", MB_ICONERROR | MB_OK);
+	int choice;
+	if (!initialize("..\\data"))
+	{
+		loadImgPath("..\\Img");
+		m_luxandFace->initalImage(m_vecStrImgPath);
+		m_imgData = m_luxandFace->imgData();
+	}
+	while (1)
+	{
+		std::cout << "Input 1 to build database index, 2 to test image,3 to exit: ";
+		std::cin >> choice;
+
+		switch (choice)
+		{
+		case 1:
+			loadImgPath("..\\Img");
+			m_luxandFace->initalImage(m_vecStrImgPath);
+			m_imgData = m_luxandFace->imgData();
+			break;
+		case 2:
+			run();
+			break;
+		case 3:
+			cout << "exit" << endl;
+			return 0;
+		default:
+			cout << "Input Num is error!" << endl;
+		}
+	}
+	
+	return 0;
+}
+
+void  run()
+{
+	if (FSDKE_OK != FSDK_ActivateLibrary(activateLibrary))
+	{
+		MessageBox(0, L"Please run the License Key Wizard (Start - Luxand - FaceSDK - License Key Wizard)\n",
+			L"Error activating FaceSDK", MB_ICONERROR | MB_OK);
 		exit(-1);
 	}
 	FSDK_Initialize("");
@@ -27,9 +52,10 @@ int main()
 	for (int i = 0; i < CameraCount; i++)
 		wprintf(L"camera: %s\n", CameraList[i]);
 
-	if (0 == CameraCount) {
+	if (0 == CameraCount)
+	{
 		MessageBox(0, L"Please attach a camera", L"Error", MB_ICONERROR | MB_OK);
-		return -1;
+		return ;
 	}
 
 	int CameraIdx = 0; // choose the first camera
@@ -47,10 +73,10 @@ int main()
 
 	printf("Trying to open the first camera...\n");
 	int cameraHandle = 0;
-	if (FSDKE_OK != FSDK_OpenVideoCamera(CameraList[CameraIdx], &cameraHandle))		
+	if (FSDKE_OK != FSDK_OpenVideoCamera(CameraList[CameraIdx], &cameraHandle))
 	{
 		MessageBox(0, L"Error opening the first camera", L"Error", MB_ICONERROR | MB_OK);
-		return -2;
+		return ;
 	}
 
 	// creating a Tracker
@@ -63,21 +89,20 @@ int main()
 	FSDK_SetFaceDetectionThreshold(5);
 
 	FSDK_FaceTemplate  m_currentface;
-	
-	
-	initialize();
+
+
 	float m_fSimilarity = 0;
-	
-	long long  *reassignedID=NULL;
+
+	long long  *reassignedID = NULL;
 	//long long  *count = NULL;
 	Mat m_matImg;
-	while (1) 
+	while (1)
 	{
 		int m_iCurrent = clock();
 		HImage imageHandle;
-		if (FSDK_GrabFrame(cameraHandle, &imageHandle) == FSDKE_OK) 
+		if (FSDK_GrabFrame(cameraHandle, &imageHandle) == FSDKE_OK)
 		{ // grab the current frame from the camera
-			
+
 			long long faceCount = 0;
 			long long IDs[256];
 			FSDK_FeedFrame(tracker, 0, imageHandle, &faceCount, IDs, sizeof(IDs));
@@ -88,20 +113,18 @@ int main()
 			m_matImg = m_hbitmapAndMat->HbitMapToMat(hbitmapHandle);
 			m_hbitmapAndMat = NULL;
 			delete[] m_hbitmapAndMat;
-			
+
 			for (int i = 0; i < faceCount; i++)
 			{
 				TFacePosition facePosition;
 				FSDK_GetTrackerFacePosition(tracker, 0, IDs[i], &facePosition);
-				//FSDK_GetIDReassignment(tracker, IDs[i], reassignedID);
 
 				int x1 = facePosition.xc - (int)(facePosition.w*0.6);
 				int y1 = facePosition.yc - (int)(facePosition.w*0.5);
 				int x2 = facePosition.xc + (int)(facePosition.w*0.6);
 				int y2 = facePosition.yc + (int)(facePosition.w*0.7);
-				//Rectangle(dc, x1, 16 + y1, x2, 16 + y2);
 				cv::Rect m_rect(x1, y1, x2 - x1, y2 - y1);
-				cv::rectangle(m_matImg, m_rect, Scalar( 255, 255,0));
+				cv::rectangle(m_matImg, m_rect, Scalar(255, 255, 0));
 				char AttributeValues[1024];
 
 				float AgeValue = 0.0f;
@@ -129,19 +152,19 @@ int main()
 						m_fMaxSimilarity = m_fSimilarity;
 					}
 				}
-				
+
 				cout << "m_fSimilarity:" << m_fMaxSimilarity << endl;
 				char str[1024];
 				sprintf_s(str, sizeof(str)-1, "Age: %d; %s, %d%%,simlarity:%.2f", (int)AgeValue, (ConfidenceMale > ConfidenceFemale ? "Male" : "Female"),
 					ConfidenceMale > ConfidenceFemale ? (int)(ConfidenceMale * 100) : (int)(ConfidenceFemale * 100), m_fMaxSimilarity);
-				
 
-				putText(m_matImg, str, Point(x1, y2 + 10),1,1,Scalar(255,0,255) );
-				
+
+				putText(m_matImg, str, Point(x1, y2 + 10), 1, 1, Scalar(255, 0, 255));
+
 				/*FSDK_GetSimilarIDCount(tracker, IDs[i], count);
-			
+
 				FSDK_GetIDReassignment(tracker, IDs[i], reassignedID);*/
-				
+
 			}
 			//resize(m_matImg, m_matImg, Size(m_matImg.cols * 2, m_matImg.rows * 2));
 			if (!m_matImg.empty())
@@ -152,8 +175,8 @@ int main()
 			DeleteObject(hbitmapHandle); // delete the HBITMAP object
 			FSDK_FreeImage(imageHandle);// delete the FaceSDK image handle
 			//FSDK_GetSimilarIDList(tracker,IDs,)
-			
-		  	
+
+
 		};
 
 		std::cout << clock() - m_iCurrent << "ms" << std::endl;
@@ -162,10 +185,10 @@ int main()
 	//ReleaseDC(hwnd, dc);
 	FSDK_FreeTracker(tracker);
 
-	if (FSDKE_OK != FSDK_CloseVideoCamera(cameraHandle)) 
+	if (FSDKE_OK != FSDK_CloseVideoCamera(cameraHandle))
 	{
 		MessageBox(0, L"Error closing camera", L"Error", MB_ICONERROR | MB_OK);
-		return -5;
+		return ;
 	}
 	FSDK_FreeVideoFormatList(VideoFormatList);
 	FSDK_FreeCameraList(CameraList, CameraCount);
@@ -178,11 +201,8 @@ int main()
 	delete[] m_luxandFace;
 	m_imgData.clear();
 	m_vecStrImgPath.clear();
-	return 0;
 }
-
-
-void initialize()
+bool  initialize(string m_strModelPath)
 {
 
 	getFiles *m_getFiles = new getFiles();
@@ -193,12 +213,12 @@ void initialize()
 	delete[] m_getFiles;
 	if (!m_vecStrDatalFilePath.size())
 	{
-		loadImgPath("..\\Img");
-		m_luxandFace->initalImage(m_vecStrImgPath);
-		m_imgData = m_luxandFace->imgData();
+		return false;
 	}
 	else
 	{
+		cout << "-----------------Initialize...-----------------" << endl;
+		int  m_tTime = clock();
 		std::ifstream file;
 		file.open(m_vecStrDatalFilePath[m_vecStrDatalFilePath.size() - 1]);
 		int m_ImgNum;
@@ -212,33 +232,31 @@ void initialize()
 			{
 				file.getline(buffer, 1000);
 			}
-			cout << buffer << endl;
+			
 			string m_str = buffer;
 			m_imgData.m_strImgPath.push_back(m_str);
-			//m_str.clear();
-
-			 
+ 
 			FSDK_FaceTemplate m_faceTmp;
-			for (int j = 0; j < 13324; j++)
+			for (int j = 0; j < m_featureNum; j++)
 			{
-				float m_fValue;
-				file >> m_fValue;
-				m_faceTmp.ftemplate[j] = m_fValue;
+				float m_fFaceTmp;
+				file >> m_fFaceTmp;
+				m_faceTmp.ftemplate[j] = m_fFaceTmp;
 			}
 			m_imgData.m_vecFaceTemplate.push_back(m_faceTmp);
-
+			if ((i+1) % 5 == 0)
+			{
+				cout << "The Processing:" << 100 * i*1.0 / m_ImgNum << "%" << endl;
+				cout << buffer << endl;
+			}
 		}
+		cout << "The Processing:" << 100  << "%" << endl;
+		cout << "-----------Loading is Successful! cost time:" << clock() - m_tTime << "ms" << "---------------" << endl;
+		cout << "-----------------All are over-----------------" << endl;
+		return true;
 	}
-	//cout << m_imgData.m_strImgPath.size() << endl;
 }
-int getlen(char *result)
-{
-	int i = 0;
-	while (result[i] != '\0'){
-		i++;
-	}
-	return i;
-}
+
 void loadImgPath(string m_strImgPath)
 {
 	m_vecStrImgPath.clear();

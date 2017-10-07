@@ -23,5 +23,6 @@ public:
 public:
 	ImgData m_ImgData;
 #define  m_strModelName "..//data//%d%d%d%d%d%d.index"
+#define  m_featureNum 13324
 };
 

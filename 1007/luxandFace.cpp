@@ -49,13 +49,18 @@ void luxandFace::initalImage(vector<string> m_vecStrFilePath)
 	for (int i = 0; i < m_ImgData.m_strImgPath.size(); i++)
 	{
 		file << m_ImgData.m_strImgPath[i] << endl;
-		for (int j = 0; j < 13324; j++)
+		for (int j = 0; j < m_featureNum; j++)
 		{
-			float m_value;
-			m_value=m_ImgData.m_vecFaceTemplate[i].ftemplate[j];
-			file << m_value << " ";
+			float m_fFaceTmp;
+			m_fFaceTmp=m_ImgData.m_vecFaceTemplate[i].ftemplate[j];
+			file << m_fFaceTmp << " ";
 		}
 		file << std::endl;
+		if ((i + 1) % 5 == 0)
+		{
+			cout << "The Processing:" << i*1.0 / m_ImgData.m_strImgPath.size()*100 <<"%"<< endl;
+			cout << m_ImgData.m_strImgPath[i] << endl;
+		}
 	}
 	file.close();
 	cout << "-----------------cost time:" << clock() - m_tTime <<"ms"<<"----------------" << endl;
