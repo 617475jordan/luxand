@@ -14,7 +14,7 @@ void luxandFace::initalImage(vector<string> m_vecStrFilePath)
 {
 	cout << "-----------------Initialize...-----------------" << endl;
 	int  m_tTime = clock();
-	for (int i = 0; i < m_vecStrFilePath.size(); i++)
+	for (unsigned int i = 0; i < m_vecStrFilePath.size(); i++)
 	{
 		HImage  m_Image;
 		const char *m_charImgPath = m_vecStrFilePath[i].c_str();
@@ -46,7 +46,7 @@ void luxandFace::initalImage(vector<string> m_vecStrFilePath)
 	std::ofstream file;
 	file.open(m_charDstModelName);
 	file << m_ImgData.m_strImgPath.size() << endl;
-	for (int i = 0; i < m_ImgData.m_strImgPath.size(); i++)
+	for (unsigned int i = 0; i < m_ImgData.m_strImgPath.size(); i++)
 	{
 		file << m_ImgData.m_strImgPath[i] << endl;
 		for (int j = 0; j < m_featureNum; j++)

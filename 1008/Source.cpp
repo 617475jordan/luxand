@@ -37,7 +37,6 @@ int main()
 
 void  run()
 {
-	
 
 	int CameraCount;
 	wchar_t ** CameraList;
@@ -77,8 +76,8 @@ void  run()
 	FSDK_CreateTracker(&tracker);
 
 	int err = 0; // set realtime face detection parameters
-	FSDK_SetTrackerMultipleParameters(tracker, "RecognizeFaces=true; DetectAge=true; DetectGender=true; HandleArbitraryRotations=true; DetermineFaceRotationAngle=false; InternalResizeWidth=200; FaceDetectionThreshold=5", &err);
-	FSDK_SetFaceDetectionParameters(true, false, 200);
+	FSDK_SetTrackerMultipleParameters(tracker, "RecognizeFaces=true; DetectAge=true; DetectGender=true; HandleArbitraryRotations=false; DetermineFaceRotationAngle=false; InternalResizeWidth=200; FaceDetectionThreshold=5", &err);
+	FSDK_SetFaceDetectionParameters(false, false, 200);
 	FSDK_SetFaceDetectionThreshold(5);
 
 	FSDK_FaceTemplate  m_currentface;
@@ -145,7 +144,8 @@ void  run()
 					m_igender = -1;
 				}
 				float m_fMaxSimilarity = 0;
-				for (int j = 0; j<m_imgData.m_vecFaceTemplate.size(); j++)
+				int   m_iId = 0;
+				for (unsigned int j = 0; j<m_imgData.m_vecFaceTemplate.size(); j++)
 				{
 					if (abs(AgeValue - m_imgData.m_fAge[i])>8||m_igender!=m_imgData.m_Gender[i])
 					{
@@ -155,27 +155,33 @@ void  run()
 					if (m_fSimilarity>m_fMaxSimilarity)
 					{
 						m_fMaxSimilarity = m_fSimilarity;
+						m_iId = j;
 					}
 				}
 
 				cout << "m_fSimilarity:" << m_fMaxSimilarity << endl;
 				char str[1024];
-				sprintf_s(str, sizeof(str)-1, "Age: %d; %s, %d%%,simlarity:%.2f", (int)AgeValue, (ConfidenceMale > ConfidenceFemale ? "Male" : "Female"),
-					ConfidenceMale > ConfidenceFemale ? (int)(ConfidenceMale * 100) : (int)(ConfidenceFemale * 100), m_fMaxSimilarity);
+				sprintf_s(str, sizeof(str)-1, "Age: %d; %s, %d%%,simlarity:%.2f;ID:%d", (int)AgeValue, (ConfidenceMale > ConfidenceFemale ? "Male" : "Female"),
+					ConfidenceMale > ConfidenceFemale ? (int)(ConfidenceMale * 100) : (int)(ConfidenceFemale * 100), m_fMaxSimilarity, m_iId);
 				putText(m_matImg, str, Point(x1, y2 + 10), 1, 1, Scalar(255, 0, 255));
 
-
 			}
-			if (!m_matImg.empty())
-			{
-				cv::imshow("demo", m_matImg);
-				waitKey(1);
-			}
+		
 			DeleteObject(hbitmapHandle); // delete the HBITMAP object
 			FSDK_FreeImage(imageHandle);// delete the FaceSDK image handle
 
-		};
-		std::cout << clock() - m_iCurrent << "ms" << std::endl;
+		}
+		int m_iCurrentTime = clock() - m_iCurrent;
+		std::cout << m_iCurrentTime << "ms" << std::endl;
+		double m_fFps = 1000.0 / m_iCurrentTime;
+		char str[1024];
+		sprintf_s(str, "fps:%.1f",m_fFps);
+		putText(m_matImg, str, Point(10, 10), 1, 1, Scalar(255, 0, 255));
+		if (!m_matImg.empty())
+		{
+			cv::imshow("demo", m_matImg);
+			waitKey(1);
+		}
 	}
 
 	//ReleaseDC(hwnd, dc);
@@ -251,7 +257,7 @@ bool  initialize(string m_strModelPath)
 			float m_fAge;
 			file >> m_fAge;
 			m_imgData.m_fAge.push_back(m_fAge);
-			float m_fGender;
+			int m_fGender;
 			file >> m_fGender;
 			m_imgData.m_Gender.push_back(m_fGender);
 			if ((i+1) % 5 == 0)
