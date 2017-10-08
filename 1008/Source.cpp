@@ -25,10 +25,10 @@ int main()
 			run();
 			break;
 		case 3:
-			cout << "exit" << endl;
+			std::cout << "exit" << endl;
 			return 0;
 		default:
-			cout << "Input Num is error!" << endl;
+			std::cout << "Input Num is error!" << endl;
 		}
 	}
 	
@@ -79,21 +79,25 @@ void  run()
 	FSDK_SetTrackerMultipleParameters(tracker, "RecognizeFaces=true; DetectAge=true; DetectGender=true; HandleArbitraryRotations=false; DetermineFaceRotationAngle=false; InternalResizeWidth=200; FaceDetectionThreshold=5", &err);
 	FSDK_SetFaceDetectionParameters(false, false, 200);
 	FSDK_SetFaceDetectionThreshold(5);
-
+	float m_fMatchingThreshold;
+	FSDK_GetMatchingThresholdAtFAR(0.4, &m_fMatchingThreshold);
 	FSDK_FaceTemplate  m_currentface;
-	float m_fSimilarity = 0;
-	long long  *reassignedID = NULL;
+	
 	//long long  *count = NULL;
-	Mat m_matImg;
+	long long IDs[256];
+	vector<string> m_vecStrImgName;
+
 	while (1)
 	{
 		int m_iCurrent = clock();
 		HImage imageHandle;
+		Mat m_matImg;
+
 		if (FSDK_GrabFrame(cameraHandle, &imageHandle) == FSDKE_OK)
 		{ // grab the current frame from the camera
 
 			long long faceCount = 0;
-			long long IDs[256];
+			
 			FSDK_FeedFrame(tracker, 0, imageHandle, &faceCount, IDs, sizeof(IDs));
 
 			HBITMAP hbitmapHandle; // to store the HBITMAP handle
@@ -105,6 +109,7 @@ void  run()
 
 			for (int i = 0; i < faceCount; i++)
 			{
+				
 				TFacePosition facePosition;
 				FSDK_GetTrackerFacePosition(tracker, 0, IDs[i], &facePosition);
 
@@ -124,13 +129,13 @@ void  run()
 				res = FSDK_GetTrackerFacialAttribute(tracker, 0, IDs[i], "Age", AttributeValues, sizeof(AttributeValues));
 				FSDK_GetValueConfidence(AttributeValues, "Age", &AgeValue);
 
-				res = FSDK_GetTrackerFacialAttribute(tracker, 0, IDs[i], "Gender", AttributeValues, sizeof(AttributeValues));
+				/*res = FSDK_GetTrackerFacialAttribute(tracker, 0, IDs[i], "Gender", AttributeValues, sizeof(AttributeValues));
 				FSDK_GetValueConfidence(AttributeValues, "Male", &ConfidenceMale);
-				FSDK_GetValueConfidence(AttributeValues, "Female", &ConfidenceFemale);
+				FSDK_GetValueConfidence(AttributeValues, "Female", &ConfidenceFemale);*/
 
 				FSDK_GetFaceTemplate(tracker, &m_currentface);
 
-				int m_igender=-1;
+			/*	int m_igender=-1;
 				if (ConfidenceMale > ConfidenceFemale)
 				{
 					m_igender = 0;
@@ -142,15 +147,16 @@ void  run()
 				else
 				{
 					m_igender = -1;
-				}
-				float m_fMaxSimilarity = 0;
-				int   m_iId = 0;
+				}*/
+				float m_fMaxSimilarity = -1;
+				int   m_iId = -1;
 				for (unsigned int j = 0; j<m_imgData.m_vecFaceTemplate.size(); j++)
 				{
-					if (abs(AgeValue - m_imgData.m_fAge[i])>8||m_igender!=m_imgData.m_Gender[i])
+					if (abs(AgeValue - m_imgData.m_fAge[i])>8/*||m_igender!=m_imgData.m_Gender[i]*/)
 					{
 						continue;
 					}
+					float m_fSimilarity = 0;
 					FSDK_MatchFaces(&m_imgData.m_vecFaceTemplate[j], &m_currentface, &m_fSimilarity);
 					if (m_fSimilarity>m_fMaxSimilarity)
 					{
@@ -158,33 +164,68 @@ void  run()
 						m_iId = j;
 					}
 				}
-
-				cout << "m_fSimilarity:" << m_fMaxSimilarity << endl;
-				char str[1024];
-				sprintf_s(str, sizeof(str)-1, "Age: %d; %s, %d%%,simlarity:%.2f;ID:%d", (int)AgeValue, (ConfidenceMale > ConfidenceFemale ? "Male" : "Female"),
-					ConfidenceMale > ConfidenceFemale ? (int)(ConfidenceMale * 100) : (int)(ConfidenceFemale * 100), m_fMaxSimilarity, m_iId);
-				putText(m_matImg, str, Point(x1, y2 + 10), 1, 1, Scalar(255, 0, 255));
-
+				if (m_iId > -1 && m_fMatchingThreshold<m_fMaxSimilarity)
+				{
+					bool m_b = false;
+					for (int k = 0; k < m_vecStrImgName.size(); k++)
+					{
+						if (m_imgData.m_strImgPath[m_iId] == m_vecStrImgName[k])
+						{
+							m_b = true;
+						}
+					}
+					if (m_b == false)
+					{
+						m_vecStrImgName.push_back(m_imgData.m_strImgPath[m_iId]);
+						FSDK_LockID(tracker, IDs[i]);
+						char name[100];
+						time_t m_currentTime = time(0);
+						struct tm * timeinfo;
+						timeinfo = localtime(&m_currentTime);
+						sprintf(name, "%d%d%d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+						FSDK_SetName(tracker, IDs[i], name);
+						
+					}
+					std::cout << "m_fSimilarity:" << m_fMaxSimilarity << endl;
+					char str[1024];
+					/*sprintf_s(str, sizeof(str)-1, "Age: %d; %s, %d%%,simlarity:%.2f;ID:%d", (int)AgeValue, (ConfidenceMale > ConfidenceFemale ? "Male" : "Female"),
+					ConfidenceMale > ConfidenceFemale ? (int)(ConfidenceMale * 100) : (int)(ConfidenceFemale * 100), m_fMaxSimilarity, m_iId);*/
+					sprintf_s(str, sizeof(str)-1, "Age: %d;simlarity:%.2f;ID:%d", (int)AgeValue, m_fMaxSimilarity, m_iId);
+					cv::putText(m_matImg, str, Point(x1, y2 + 10), 1, 1, Scalar(255, 0, 255));
+				}	
 			}
-		
+			char m_charName[256];
+			FSDK_GetAllNames(tracker, *IDs, m_charName, sizeof(m_charName));
+			std::cout << "name:" << m_charName << endl;
+
+			
 			DeleteObject(hbitmapHandle); // delete the HBITMAP object
 			FSDK_FreeImage(imageHandle);// delete the FaceSDK image handle
-
+			long long  reassignedID ;
+			long long updateIDs[256];
+			FSDK_GetIDReassignment(tracker, *updateIDs, &reassignedID);
+			std::cout << "reassignedID:" << reassignedID << endl;
+			
+			long long m_count;
+			FSDK_GetSimilarIDCount(tracker, *IDs, &m_count);
+			//cout << "m_count:" << m_count << endl;
+			/*long long m_similarityList[1000];
+			FSDK_GetSimilarIDList(tracker, *IDs, m_similarityList, sizeof(m_similarityList));
+			cout << "m_similarityList:" << *m_similarityList << endl;*/
+			/*FSDK_GetAllNames()*/
 		}
 		int m_iCurrentTime = clock() - m_iCurrent;
 		std::cout << m_iCurrentTime << "ms" << std::endl;
 		double m_fFps = 1000.0 / m_iCurrentTime;
 		char str[1024];
 		sprintf_s(str, "fps:%.1f",m_fFps);
-		putText(m_matImg, str, Point(10, 10), 1, 1, Scalar(255, 0, 255));
+		cv::putText(m_matImg, str, Point(10, 10), 1, 1, Scalar(255, 0, 255));
 		if (!m_matImg.empty())
 		{
 			cv::imshow("demo", m_matImg);
 			waitKey(1);
 		}
 	}
-
-	//ReleaseDC(hwnd, dc);
 	FSDK_FreeTracker(tracker);
 
 	if (FSDKE_OK != FSDK_CloseVideoCamera(cameraHandle))
@@ -197,8 +238,6 @@ void  run()
 
 	FSDK_FinalizeCapturing();
 	FSDK_Finalize();
-	reassignedID = NULL;
-	delete[] reassignedID;
 	m_luxandFace = NULL;
 	delete[] m_luxandFace;
 	m_imgData.clear();
@@ -227,7 +266,7 @@ bool  initialize(string m_strModelPath)
 	}
 	else
 	{
-		cout << "-----------------Initialize...-----------------" << endl;
+		std::cout << "-----------------Initialize...-----------------" << endl;
 		int  m_tTime = clock();
 		std::ifstream file;
 		file.open(m_vecStrDatalFilePath[m_vecStrDatalFilePath.size() - 1]);
@@ -262,13 +301,13 @@ bool  initialize(string m_strModelPath)
 			m_imgData.m_Gender.push_back(m_fGender);
 			if ((i+1) % 5 == 0)
 			{
-				cout << "The Processing:" << 100 * i*1.0 / m_ImgNum << "%" << endl;
-				cout << buffer << endl;
+				std::cout << "The Processing:" << 100 * i*1.0 / m_ImgNum << "%" << endl;
+				std::cout << buffer << endl;
 			}
 		}
-		cout << "The Processing:" << 100  << "%" << endl;
-		cout << "-----------Loading is Successful! cost time:" << clock() - m_tTime << "ms" << "---------------" << endl;
-		cout << "-----------------All are over-----------------" << endl;
+		std::cout << "The Processing:" << 100 << "%" << endl;
+		std::cout << "-----------Loading is Successful! cost time:" << clock() - m_tTime << "ms" << "---------------" << endl;
+		std::cout << "-----------------All are over-----------------" << endl;
 		return true;
 	}
 }
